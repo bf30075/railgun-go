@@ -22,8 +22,8 @@ public.json
 
 # Dependency and fixture generation scratch space
 node_modules/
-engine/
-wallet/
+/engine/
+/wallet/
 
 # Secrets and env
 .env
