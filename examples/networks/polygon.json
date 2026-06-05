@@ -1,0 +1,29 @@
+{
+  "name": "Polygon",
+  "chain": {
+    "type": 0,
+    "id": 137
+  },
+  "rpcEndpoint": "https://polygon-rpc.com",
+  "supportsV3": false,
+  "defaultStartBlock": 28083766,
+  "defaultChunkSize": 2000,
+  "defaultConfirmations": 32,
+  "contractAddresses": {
+    "proxyContract": "0x19b620929f97b7b990801496c3b361ca5def8c71",
+    "relayAdaptContract": "0xF82d00fC51F730F42A00F85E74895a2849ffF2Dd",
+    "wrappedBaseToken": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+    "railgunSmartWalletV2": "0x19b620929f97b7b990801496c3b361ca5def8c71"
+  },
+  "scanAddresses": {
+    "V2_PoseidonMerkle": ["0x19b620929f97b7b990801496c3b361ca5def8c71"]
+  },
+  "poi": {
+    "launchBlocks": [
+      {
+        "chain": {"type": 0, "id": 137},
+        "blockNumber": 60907366
+      }
+    ]
+  }
+}

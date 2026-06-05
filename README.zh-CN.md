@@ -1,6 +1,6 @@
 # railgun-go
 
-[English](README.md) · [架构](docs/architecture.md) · [Quickstart](docs/quickstart.md) · [rapidsnark 安装](docs/rapidsnark-setup.md) · [Changelog](CHANGELOG.md) · [贡献](CONTRIBUTING.md) · [安全](SECURITY.md)
+[English](README.md) · [架构](docs/architecture.md) · [Quickstart](docs/quickstart.md) · [网络配置](examples/networks/) · [rapidsnark 安装](docs/rapidsnark-setup.md) · [Changelog](CHANGELOG.md) · [贡献](CONTRIBUTING.md) · [安全](SECURITY.md)
 
 `railgun-go` 是 Railgun 协议引擎的 Go 实现。代码按引擎边界拆分 —— 加密核心、钱包状态、网络 provider、同步策略、交易执行 —— 每一层都可以脱离 CLI/UI 单独测试。
 

@@ -1,6 +1,6 @@
 # railgun-go
 
-[中文](README.zh-CN.md) · [Architecture](docs/architecture.md) · [Quickstart](docs/quickstart.md) · [rapidsnark Setup](docs/rapidsnark-setup.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[中文](README.zh-CN.md) · [Architecture](docs/architecture.md) · [Quickstart](docs/quickstart.md) · [Network configs](examples/networks/) · [rapidsnark Setup](docs/rapidsnark-setup.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 `railgun-go` is a Go implementation of the Railgun protocol engine. The code is split along engine boundaries — cryptographic core, wallet state, network providers, sync strategies, and transaction execution — so each layer is testable without a CLI or UI.
 

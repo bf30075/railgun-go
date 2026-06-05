@@ -1,0 +1,29 @@
+{
+  "name": "Ethereum",
+  "chain": {
+    "type": 0,
+    "id": 1
+  },
+  "rpcEndpoint": "https://ethereum-rpc.publicnode.com",
+  "supportsV3": false,
+  "defaultStartBlock": 14737691,
+  "defaultChunkSize": 2000,
+  "defaultConfirmations": 6,
+  "contractAddresses": {
+    "proxyContract": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9",
+    "relayAdaptContract": "0xAc9f360Ae85469B27aEDdEaFC579Ef2d052aD405",
+    "wrappedBaseToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    "railgunSmartWalletV2": "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9"
+  },
+  "scanAddresses": {
+    "V2_PoseidonMerkle": ["0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9"]
+  },
+  "poi": {
+    "launchBlocks": [
+      {
+        "chain": {"type": 0, "id": 1},
+        "blockNumber": 18514200
+      }
+    ]
+  }
+}

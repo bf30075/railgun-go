@@ -1,0 +1,29 @@
+{
+  "name": "BNB_Chain",
+  "chain": {
+    "type": 0,
+    "id": 56
+  },
+  "rpcEndpoint": "https://bsc-dataseed.bnbchain.org",
+  "supportsV3": false,
+  "defaultStartBlock": 17633701,
+  "defaultChunkSize": 2000,
+  "defaultConfirmations": 3,
+  "contractAddresses": {
+    "proxyContract": "0x590162bf4b50f6576a459b75309ee21d92178a10",
+    "relayAdaptContract": "0xF82d00fC51F730F42A00F85E74895a2849ffF2Dd",
+    "wrappedBaseToken": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+    "railgunSmartWalletV2": "0x590162bf4b50f6576a459b75309ee21d92178a10"
+  },
+  "scanAddresses": {
+    "V2_PoseidonMerkle": ["0x590162bf4b50f6576a459b75309ee21d92178a10"]
+  },
+  "poi": {
+    "launchBlocks": [
+      {
+        "chain": {"type": 0, "id": 56},
+        "blockNumber": 39782450
+      }
+    ]
+  }
+}

@@ -17,37 +17,25 @@ need a `prover` binary; see [rapidsnark Setup](rapidsnark-setup.md).
 
 ## 2. Configure a Network
 
-`NetworkConfig` can be built in Go or loaded from JSON. Replace all addresses
-and the RPC URL with values for the chain you are targeting.
-
-```json
-{
-  "name": "BNB_Chain",
-  "chain": {
-    "type": 0,
-    "id": 56
-  },
-  "rpcEndpoint": "https://example-rpc.invalid",
-  "supportsV3": false,
-  "defaultStartBlock": 0,
-  "defaultChunkSize": 2000,
-  "defaultConfirmations": 3,
-  "scanAddresses": {
-    "V2_PoseidonMerkle": [
-      "0x0000000000000000000000000000000000000000"
-    ]
-  }
-}
-```
-
-Load and validate it:
+The engine is chain-agnostic. Drop-in mainnet configs for BSC, Ethereum, and
+Polygon ship under [`examples/networks/`](../examples/networks/) — they include
+the upstream Railgun contract addresses, deployment blocks, and POI launch
+blocks, so you only need to override `rpcEndpoint` for your provider:
 
 ```go
-config, err := sdk.LoadNetworkConfig("network.json")
+config, err := sdk.LoadNetworkConfig("examples/networks/bsc.json")
 if err != nil {
     return err
 }
+config.RPCEndpoint = "https://your-provider/bsc" // optional override
 ```
+
+`NetworkConfig` is a plain Go struct (`pkg/sdk.NetworkConfig`) — build it in
+code, ship it as JSON, or roll your own loader. To target a chain that isn't
+bundled, copy one of the example files and replace `chain.id`, the contract
+addresses, `defaultStartBlock`, and the POI launch block. Schema fields are
+documented in [docs/architecture.md](architecture.md#persistence-layout) (for
+where they're persisted) and inline on the `NetworkConfig` struct.
 
 ## 3. Create a Read-Only Runtime
 
@@ -66,7 +54,7 @@ import (
 
 func main() {
     ctx := context.Background()
-    config, err := sdk.LoadNetworkConfig("network.json")
+    config, err := sdk.LoadNetworkConfig("examples/networks/bsc.json")
     if err != nil {
         log.Fatal(err)
     }
