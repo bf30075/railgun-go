@@ -1,0 +1,39 @@
+# Build and test outputs
+bin/
+build/
+dist/
+coverage.out
+*.test
+*.out
+*.exe
+
+# Local runtime state
+.railgun-go/
+*.vault.json
+*.tmp
+*.log
+
+# Prover / artifact scratch
+artifacts/
+*.zkey.local
+*.wtns
+proof.json
+public.json
+
+# Dependency and fixture generation scratch space
+node_modules/
+engine/
+wallet/
+
+# Secrets and env
+.env
+.env.*
+*.pem
+*.key
+
+# OS/editor files
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/

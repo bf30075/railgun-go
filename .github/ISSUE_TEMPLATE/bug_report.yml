@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible railgun-go engine issue.
+title: "[bug]: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What failed, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Provide the smallest code snippet, fixture, command, or test case that reproduces the issue.
+      placeholder: |
+        go test ./pkg/...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: railgun-go version or commit
+      placeholder: commit SHA or tag
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      placeholder: go version
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Area
+      options:
+        - pkg/crypto
+        - pkg/proof
+        - pkg/transaction
+        - pkg/events
+        - pkg/wallet
+        - pkg/quicksync
+        - pkg/sdk
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or failure output
+      description: Remove secrets, private keys, mnemonics, RPC credentials, and private transaction data before posting.
+      render: text

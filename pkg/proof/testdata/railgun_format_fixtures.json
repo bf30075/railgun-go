@@ -1,0 +1,197 @@
+[
+  {
+    "name": "1x2",
+    "raw": {
+      "publicInputs": {
+        "merkleRoot": "0x01",
+        "boundParamsHash": "0x02",
+        "nullifiers": ["0x03"],
+        "commitmentsOut": ["0x04", "0x05"]
+      },
+      "privateInputs": {
+        "tokenAddress": "0x06",
+        "publicKey": ["7", "8"],
+        "signature": ["9", "10", "11"],
+        "randomIn": ["0x12"],
+        "valueIn": ["13"],
+        "pathElements": [["14", "15", "16"], ["17", "18"]],
+        "leavesIndices": ["19"],
+        "nullifyingKey": "20",
+        "npkOut": ["21", "22"],
+        "valueOut": ["23", "24"]
+      }
+    },
+    "expected": {
+      "merkleRoot": "1",
+      "boundParamsHash": "2",
+      "nullifiers": ["3"],
+      "commitmentsOut": ["4", "5"],
+      "token": "6",
+      "publicKey": ["7", "8"],
+      "signature": ["9", "10", "11"],
+      "randomIn": ["18"],
+      "valueIn": ["13"],
+      "pathElements": ["14", "15", "16", "17", "18"],
+      "leavesIndices": ["19"],
+      "nullifyingKey": "20",
+      "npkOut": ["21", "22"],
+      "valueOut": ["23", "24"]
+    }
+  },
+  {
+    "name": "1x3",
+    "raw": {
+      "publicInputs": {
+        "merkleRoot": "31",
+        "boundParamsHash": "32",
+        "nullifiers": ["33"],
+        "commitmentsOut": ["34", "35", "36"]
+      },
+      "privateInputs": {
+        "tokenAddress": "37",
+        "publicKey": ["38", "39"],
+        "signature": ["40", "41", "42"],
+        "randomIn": ["43"],
+        "valueIn": ["44"],
+        "pathElements": [["45"], ["46"], ["47"]],
+        "leavesIndices": ["48"],
+        "nullifyingKey": "49",
+        "npkOut": ["50", "51", "52"],
+        "valueOut": ["53", "54", "55"]
+      }
+    },
+    "expected": {
+      "merkleRoot": "31",
+      "boundParamsHash": "32",
+      "nullifiers": ["33"],
+      "commitmentsOut": ["34", "35", "36"],
+      "token": "37",
+      "publicKey": ["38", "39"],
+      "signature": ["40", "41", "42"],
+      "randomIn": ["43"],
+      "valueIn": ["44"],
+      "pathElements": ["45", "46", "47"],
+      "leavesIndices": ["48"],
+      "nullifyingKey": "49",
+      "npkOut": ["50", "51", "52"],
+      "valueOut": ["53", "54", "55"]
+    }
+  },
+  {
+    "name": "2x2",
+    "raw": {
+      "publicInputs": {
+        "merkleRoot": "61",
+        "boundParamsHash": "62",
+        "nullifiers": ["63", "64"],
+        "commitmentsOut": ["65", "66"]
+      },
+      "privateInputs": {
+        "tokenAddress": "67",
+        "publicKey": ["68", "69"],
+        "signature": ["70", "71", "72"],
+        "randomIn": ["73", "74"],
+        "valueIn": ["75", "76"],
+        "pathElements": [["77", "78"], ["79", "80"]],
+        "leavesIndices": ["81", "82"],
+        "nullifyingKey": "83",
+        "npkOut": ["84", "85"],
+        "valueOut": ["86", "87"]
+      }
+    },
+    "expected": {
+      "merkleRoot": "61",
+      "boundParamsHash": "62",
+      "nullifiers": ["63", "64"],
+      "commitmentsOut": ["65", "66"],
+      "token": "67",
+      "publicKey": ["68", "69"],
+      "signature": ["70", "71", "72"],
+      "randomIn": ["73", "74"],
+      "valueIn": ["75", "76"],
+      "pathElements": ["77", "78", "79", "80"],
+      "leavesIndices": ["81", "82"],
+      "nullifyingKey": "83",
+      "npkOut": ["84", "85"],
+      "valueOut": ["86", "87"]
+    }
+  },
+  {
+    "name": "2x3",
+    "raw": {
+      "publicInputs": {
+        "merkleRoot": "91",
+        "boundParamsHash": "92",
+        "nullifiers": ["93", "94"],
+        "commitmentsOut": ["95", "96", "97"]
+      },
+      "privateInputs": {
+        "tokenAddress": "98",
+        "publicKey": ["99", "100"],
+        "signature": ["101", "102", "103"],
+        "randomIn": ["104", "105"],
+        "valueIn": ["106", "107"],
+        "pathElements": [["108", "109"], ["110", "111"]],
+        "leavesIndices": ["112", "113"],
+        "nullifyingKey": "114",
+        "npkOut": ["115", "116", "117"],
+        "valueOut": ["118", "119", "120"]
+      }
+    },
+    "expected": {
+      "merkleRoot": "91",
+      "boundParamsHash": "92",
+      "nullifiers": ["93", "94"],
+      "commitmentsOut": ["95", "96", "97"],
+      "token": "98",
+      "publicKey": ["99", "100"],
+      "signature": ["101", "102", "103"],
+      "randomIn": ["104", "105"],
+      "valueIn": ["106", "107"],
+      "pathElements": ["108", "109", "110", "111"],
+      "leavesIndices": ["112", "113"],
+      "nullifyingKey": "114",
+      "npkOut": ["115", "116", "117"],
+      "valueOut": ["118", "119", "120"]
+    }
+  },
+  {
+    "name": "8x2",
+    "raw": {
+      "publicInputs": {
+        "merkleRoot": "201",
+        "boundParamsHash": "202",
+        "nullifiers": ["203", "204", "205", "206", "207", "208", "209", "210"],
+        "commitmentsOut": ["211", "212"]
+      },
+      "privateInputs": {
+        "tokenAddress": "213",
+        "publicKey": ["214", "215"],
+        "signature": ["216", "217", "218"],
+        "randomIn": ["219", "220", "221", "222", "223", "224", "225", "226"],
+        "valueIn": ["227", "228", "229", "230", "231", "232", "233", "234"],
+        "pathElements": [["235"], ["236"], ["237"], ["238"], ["239"], ["240"], ["241"], ["242"]],
+        "leavesIndices": ["243", "244", "245", "246", "247", "248", "249", "250"],
+        "nullifyingKey": "251",
+        "npkOut": ["252", "253"],
+        "valueOut": ["254", "255"]
+      }
+    },
+    "expected": {
+      "merkleRoot": "201",
+      "boundParamsHash": "202",
+      "nullifiers": ["203", "204", "205", "206", "207", "208", "209", "210"],
+      "commitmentsOut": ["211", "212"],
+      "token": "213",
+      "publicKey": ["214", "215"],
+      "signature": ["216", "217", "218"],
+      "randomIn": ["219", "220", "221", "222", "223", "224", "225", "226"],
+      "valueIn": ["227", "228", "229", "230", "231", "232", "233", "234"],
+      "pathElements": ["235", "236", "237", "238", "239", "240", "241", "242"],
+      "leavesIndices": ["243", "244", "245", "246", "247", "248", "249", "250"],
+      "nullifyingKey": "251",
+      "npkOut": ["252", "253"],
+      "valueOut": ["254", "255"]
+    }
+  }
+]
