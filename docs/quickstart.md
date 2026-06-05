@@ -193,6 +193,10 @@ result, err := runtime.ShieldERC20(ctx, sdk.ShieldERC20Request{
     Amount:                  new(big.Int).SetUint64(1_000_000),           // 1.0 (6 decimals)
     Decimals:                6,
     PollInterval:            2 * time.Second,
+    MaxNonceRetries:         5,
+    Progress: func(p sdk.TransactionProgress) {
+        log.Printf("%s: %s", p.Stage, p.Message)
+    },
 })
 if err != nil {
     return err
@@ -218,6 +222,14 @@ result, err := runtime.UnshieldERC20V2(ctx, sdk.UnshieldERC20V2Request{
     TokenData:        tokenData,
     Amount:           new(big.Int).SetUint64(500_000), // half a unit
     PollInterval:     2 * time.Second,
+    MaxNonceRetries:  5,
+    // Per-request override: when set, takes precedence over RuntimeOptions.Proof.
+    // Useful for isolating artifact caches per job (e.g. one cache dir per call).
+    Proof:            sdk.ProofConfig{RapidsnarkProverBinary: "/absolute/path/to/prover"},
+    ArtifactCacheDir: ".railgun-go/jobs/<job-id>/artifacts",
+    Progress: func(p sdk.TransactionProgress) {
+        log.Printf("%s: %s", p.Stage, p.Message)
+    },
 })
 if err != nil {
     return err
@@ -233,6 +245,12 @@ wallet should be resynced.
 
 For the base token (BNB) shield/unshield variants, use `ShieldBaseToken` and
 `UnshieldBaseTokenV2` with the same shape.
+
+`Progress` and `MaxNonceRetries` are supported on every shield/unshield
+request type. `Progress` reports coarse stages (e.g. `approving`, `proving`,
+`broadcasting`, `confirmed`) — wire it to whatever surface your app needs
+(logs, TUI, SSE). `MaxNonceRetries` caps nonce reuse retries when the mempool
+returns "nonce already used"; `5` is a sensible default.
 
 ## 6. Verification Loop
 
