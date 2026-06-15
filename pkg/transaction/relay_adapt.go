@@ -60,7 +60,7 @@ type RelayShieldRequestRandomness struct {
 }
 
 func ShouldRequireSuccessForCrossContractCalls(isGasEstimate bool, isBroadcasterTransaction bool) bool {
-	return !(isBroadcasterTransaction && !isGasEstimate)
+	return !isBroadcasterTransaction || isGasEstimate
 }
 
 func MinimumGasLimitForRelayAdaptContract(minimumGasLimit *big.Int) *big.Int {

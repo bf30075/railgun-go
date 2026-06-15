@@ -378,7 +378,7 @@ func (store *PebbleStore) GetNullifierTxid(ctx context.Context, nullifier string
 		})
 		return txid, ok, err
 	}
-	var latestTree int = -1
+	latestTree := -1
 	err = store.withDB(func(db *pebble.DB) error {
 		return pebbleIterPrefix(ctx, db, []byte(pebbleNullifierPrefix), func(_, value []byte) error {
 			var event railevents.Nullifier

@@ -1,3 +1,4 @@
+// Package address implements encoding and decoding of RAILGUN 0zk addresses.
 package address
 
 import (

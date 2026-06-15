@@ -1,3 +1,4 @@
+// Package witness handles reading and writing circom witness (.wtns) data.
 package witness
 
 import (

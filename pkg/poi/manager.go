@@ -329,7 +329,7 @@ func (manager *Manager) GetListKeysCanGenerateSpentPOIs(spentTXOs []TXO, sentCom
 				break
 			}
 		}
-		if !(allSentCommitmentsValid && allUnshieldEventsValid) {
+		if !allSentCommitmentsValid || !allUnshieldEventsValid {
 			out = append(out, listKey)
 		}
 	}
