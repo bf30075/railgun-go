@@ -136,7 +136,7 @@ func (getter RemoteArtifactGetter) download(ctx context.Context, artifactURL str
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, fmt.Errorf("download %s: HTTP %d", artifactURL, resp.StatusCode)
 	}
@@ -178,7 +178,7 @@ func writeArtifactCache(path string, data []byte) error {
 		return err
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 	if _, err := tmp.Write(data); err != nil {
 		_ = tmp.Close()
 		return err

@@ -237,7 +237,7 @@ func fetchGraphPage[T graphItem](ctx context.Context, client *http.Client, endpo
 	if err != nil {
 		return nil, err
 	}
-	defer httpResponse.Body.Close()
+	defer func() { _ = httpResponse.Body.Close() }()
 	responseBody, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		return nil, err

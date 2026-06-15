@@ -133,7 +133,7 @@ func (node *HTTPNode) post(ctx context.Context, path string, payload any) (json.
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

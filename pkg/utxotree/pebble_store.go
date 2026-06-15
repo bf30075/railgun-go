@@ -59,7 +59,7 @@ func (store *PebbleStore) UpsertLeaves(ctx context.Context, leaves []Leaf) error
 	}
 	return store.withDB(func(db *pebble.DB) error {
 		batch := db.NewBatch()
-		defer batch.Close()
+		defer func() { _ = batch.Close() }()
 		for _, leaf := range leaves {
 			if err := ctx.Err(); err != nil {
 				return err
@@ -93,7 +93,7 @@ func (store *PebbleStore) UpsertV2CommitmentEvents(ctx context.Context, events [
 	returned := 0
 	err := store.withDB(func(db *pebble.DB) error {
 		batch := db.NewBatch()
-		defer batch.Close()
+		defer func() { _ = batch.Close() }()
 		for _, event := range events {
 			for _, commitment := range event.Commitments {
 				if err := ctx.Err(); err != nil {
@@ -145,7 +145,7 @@ func (store *PebbleStore) UpsertV3CommitmentEvents(ctx context.Context, events [
 	returned := 0
 	err := store.withDB(func(db *pebble.DB) error {
 		batch := db.NewBatch()
-		defer batch.Close()
+		defer func() { _ = batch.Close() }()
 		for _, event := range events {
 			for _, commitment := range event.Commitments {
 				if err := ctx.Err(); err != nil {
@@ -193,7 +193,7 @@ func (store *PebbleStore) UpsertNullifiers(ctx context.Context, nullifiers []rai
 	returned := 0
 	err := store.withDB(func(db *pebble.DB) error {
 		batch := db.NewBatch()
-		defer batch.Close()
+		defer func() { _ = batch.Close() }()
 		for _, nullifier := range nullifiers {
 			if err := ctx.Err(); err != nil {
 				return err
@@ -232,7 +232,7 @@ func (store *PebbleStore) UpsertUnshieldEvents(ctx context.Context, unshields []
 	returned := 0
 	err := store.withDB(func(db *pebble.DB) error {
 		batch := db.NewBatch()
-		defer batch.Close()
+		defer func() { _ = batch.Close() }()
 		for _, unshield := range unshields {
 			if err := ctx.Err(); err != nil {
 				return err
@@ -284,7 +284,7 @@ func (store *PebbleStore) GetLeaf(ctx context.Context, tree uint64, index uint64
 		if err != nil {
 			return err
 		}
-		defer closer.Close()
+		defer func() { _ = closer.Close() }()
 		decoded, err := decodePebbleLeaf(data)
 		if err != nil {
 			return err
@@ -310,7 +310,7 @@ func (store *PebbleStore) GetV2Commitment(ctx context.Context, tree uint64, inde
 		if err != nil {
 			return err
 		}
-		defer closer.Close()
+		defer func() { _ = closer.Close() }()
 		if err := json.Unmarshal(data, &commitment); err != nil {
 			return err
 		}
@@ -334,7 +334,7 @@ func (store *PebbleStore) GetV3Commitment(ctx context.Context, tree uint64, inde
 		if err != nil {
 			return err
 		}
-		defer closer.Close()
+		defer func() { _ = closer.Close() }()
 		if err := json.Unmarshal(data, &commitment); err != nil {
 			return err
 		}
@@ -367,7 +367,7 @@ func (store *PebbleStore) GetNullifierTxid(ctx context.Context, nullifier string
 			if err != nil {
 				return err
 			}
-			defer closer.Close()
+			defer func() { _ = closer.Close() }()
 			var event railevents.Nullifier
 			if err := json.Unmarshal(data, &event); err != nil {
 				return err
@@ -552,7 +552,7 @@ func (store *PebbleStore) RollbackToBlock(ctx context.Context, fromBlock uint64)
 	}
 	return store.withDB(func(db *pebble.DB) error {
 		batch := db.NewBatch()
-		defer batch.Close()
+		defer func() { _ = batch.Close() }()
 		deleted := 0
 		if err := pebbleDeleteLeavesFromBlock(ctx, db, batch, fromBlock, &deleted); err != nil {
 			return err
@@ -722,7 +722,7 @@ func pebbleIterPrefix(ctx context.Context, db *pebble.DB, prefix []byte, visit f
 	if err != nil {
 		return err
 	}
-	defer it.Close()
+	defer func() { _ = it.Close() }()
 	for ok := it.First(); ok; ok = it.Next() {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -744,7 +744,7 @@ func pebbleHasKey(db *pebble.DB, key []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer closer.Close()
+	defer func() { _ = closer.Close() }()
 	return true, nil
 }
 
