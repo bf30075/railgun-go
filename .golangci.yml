@@ -1,5 +1,11 @@
 version: "2"
 
+run:
+  # The binary shipped by golangci-lint-action may be built with an older Go
+  # toolchain than the go directive in go.mod (go 1.26). Pin the analysis
+  # target so the build-vs-target version check does not fail CI.
+  go: "1.24"
+
 linters:
   enable:
     - staticcheck
