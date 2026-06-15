@@ -23,3 +23,6 @@ linters:
         # Several Native()/Parse helpers use explicit struct literals to stay
         # decoupled from field ordering across mirrored types.
         - -S1016
+        # Package comments are not required across the mirrored SDK packages;
+        # this rule is treated as noise for this codebase.
+        - -ST1000
