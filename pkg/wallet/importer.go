@@ -349,11 +349,6 @@ func validateImportInputs(store StateStore, keys ScanKeys) error {
 	return nil
 }
 
-func txoFromV2Commitment(keys ScanKeys, commitment railevents.Commitment) (StoredTXO, bool, error) {
-	txo, _, ok, err := txoFromV2CommitmentWithDirection(keys, commitment)
-	return txo, ok, err
-}
-
 func txoFromV2CommitmentWithDirection(keys ScanKeys, commitment railevents.Commitment) (StoredTXO, bool, bool, error) {
 	if commitment.PreImage != nil {
 		txo, ok, err := txoFromShieldCommitment(keys, shieldCommitmentData{
@@ -404,11 +399,6 @@ func txoFromV2CommitmentWithDirection(keys ScanKeys, commitment railevents.Commi
 		CommitmentType: commitment.CommitmentType,
 	})
 	return txo, isSent, ok, err
-}
-
-func txoFromV3Commitment(keys ScanKeys, commitment railevents.V3Commitment) (StoredTXO, bool, error) {
-	txo, _, ok, err := txoFromV3CommitmentWithDirection(keys, commitment)
-	return txo, ok, err
 }
 
 func txoFromV3CommitmentWithDirection(keys ScanKeys, commitment railevents.V3Commitment) (StoredTXO, bool, bool, error) {

@@ -1,0 +1,19 @@
+version: "2"
+
+linters:
+  enable:
+    - staticcheck
+    - ineffassign
+    - unused
+    - govet
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # Error strings are intentionally kept identical to the upstream
+        # RAILGUN TypeScript SDK for cross-implementation parity, so the
+        # Go-style error-string rule is disabled.
+        - -ST1005
+        # Several Native()/Parse helpers use explicit struct literals to stay
+        # decoupled from field ordering across mirrored types.
+        - -S1016

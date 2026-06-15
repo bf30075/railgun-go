@@ -987,27 +987,6 @@ func shieldCommitmentHashHex(t *testing.T, preimage shieldImportPreimage) string
 	return mustImporterHex(t, hash)
 }
 
-func receiverScanKeys(t *testing.T, fixture transactNoteImportFixtureSet) ScanKeys {
-	t.Helper()
-	viewingPrivateKey, err := railcrypto.HexToBytes(fixture.Inputs.ViewingPrivateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	viewingPublicKey, err := railcrypto.PublicViewingKey(viewingPrivateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return ScanKeys{
-		MasterPublicKey:   mustImporterDec(t, fixture.Inputs.ReceiverMasterPublicKey),
-		ViewingPrivateKey: viewingPrivateKey,
-		ViewingPublicKey:  viewingPublicKey,
-		NullifyingKey:     big.NewInt(1234567890),
-		TokenDataByHash: map[string]railcrypto.TokenData{
-			fixture.Decrypted.V2Received.TokenHash: fixture.Inputs.TokenData,
-		},
-	}
-}
-
 func expectedNullifierHex(t *testing.T, nullifyingKey *big.Int, tree uint64, position uint64) string {
 	t.Helper()
 	global := railtxid.GetGlobalTreePosition(tree, position)
