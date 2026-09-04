@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	filippo.io/edwards25519 v1.2.0
-	github.com/andybalholm/brotli v1.1.0
+	github.com/andybalholm/brotli v1.2.3
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/consensys/gnark-crypto v0.20.1
 	github.com/ethereum/go-ethereum v1.16.7
