@@ -226,10 +226,21 @@ if err != nil {
 // result.Transaction holds the broadcast transaction and receipt.
 ```
 
-When `Amount` is `nil` the runtime spends the full available token balance.
-Spend selection only uses TXOs that POI buckets mark spendable; if stored
-TXOs are missing note randomness or Merkle proofs, the call stops and the
-wallet should be resynced.
+When `Amount` is `nil` the runtime spends the full available token balance
+(minus broadcaster fee when using Waku). Spend selection only uses TXOs that
+POI buckets mark spendable; if stored TXOs are missing note randomness or
+Merkle proofs, the call stops and the wallet should be resynced.
+
+Unshield defaults to a **random Waku broadcaster** (fee paid from the private
+balance). To self-broadcast with the wallet EVM key instead:
+
+```go
+self := true
+result, err := runtime.UnshieldERC20V2(ctx, sdk.UnshieldERC20V2Request{
+    SelfBroadcast: &self,
+    // ...
+})
+```
 
 For the base token (BNB) shield/unshield variants, use `ShieldBaseToken` and
 `UnshieldBaseTokenV2` with the same shape.

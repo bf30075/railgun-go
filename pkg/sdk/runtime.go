@@ -6,7 +6,9 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"sync"
 
+	"github.com/bf30075/railgun-go/pkg/broadcaster"
 	railcrypto "github.com/bf30075/railgun-go/pkg/crypto"
 	railevents "github.com/bf30075/railgun-go/pkg/events"
 	railpoi "github.com/bf30075/railgun-go/pkg/poi"
@@ -32,6 +34,10 @@ type RuntimeOptions struct {
 	Provider   railevents.CheckpointedLogProvider
 	// SyncStrategy 将链上事件导入钱包状态。
 	SyncStrategy SyncStrategy
+	// Broadcaster 配置公共 broadcaster（Waku）提交路径。
+	// nil 时 unshield 默认走 Waku + 随机 broadcaster 付款；
+	// Broadcaster.SelfBroadcast=true 时退回 EIP-1559 自广播。
+	Broadcaster *BroadcasterOptions
 }
 
 // Runtime 是一个钱包会话的主要 SDK facade。
@@ -48,6 +54,10 @@ type Runtime struct {
 	proofBackend railproof.Backend
 	httpClient   *http.Client
 	syncStrategy SyncStrategy
+
+	broadcaster       *BroadcasterOptions
+	broadcasterMu     sync.Mutex
+	broadcasterClient *broadcaster.Client
 }
 
 // NewRuntime 创建不含 spend/send secret material 的 runtime。
@@ -76,6 +86,7 @@ func NewRuntime(bundle WalletBundle, options RuntimeOptions) (*Runtime, error) {
 		proofBackend: options.ProofBackend,
 		httpClient:   options.HTTPClient,
 		syncStrategy: syncStrategy,
+		broadcaster:  cloneBroadcasterOptions(options.Broadcaster),
 	}, nil
 }
 

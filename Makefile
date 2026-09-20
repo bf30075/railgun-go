@@ -1,7 +1,7 @@
 .PHONY: test test-core test-tags fmt tidy check docs
 
 GO_PACKAGES := ./pkg/...
-CORE_PACKAGES := ./pkg/crypto ./pkg/proof ./pkg/transaction ./pkg/events ./pkg/wallet ./pkg/quicksync ./pkg/sdk
+CORE_PACKAGES := ./pkg/crypto ./pkg/proof ./pkg/transaction ./pkg/events ./pkg/wallet ./pkg/quicksync ./pkg/broadcaster ./pkg/sdk
 
 test:
 	go test $(GO_PACKAGES)

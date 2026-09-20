@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	railaddress "github.com/bf30075/railgun-go/pkg/address"
+	"github.com/bf30075/railgun-go/pkg/broadcaster"
 	railcrypto "github.com/bf30075/railgun-go/pkg/crypto"
 	railevents "github.com/bf30075/railgun-go/pkg/events"
 	railpoi "github.com/bf30075/railgun-go/pkg/poi"
@@ -131,6 +132,8 @@ type UnshieldBaseTokenV2Request struct {
 	MaxNonceRetries  int
 	Progress         func(TransactionProgress)
 	ProofProgress    railproof.ProgressCallback
+	// SelfBroadcast forces EIP-1559 self-send instead of the default Waku broadcaster path.
+	SelfBroadcast *bool
 }
 
 // UnshieldBaseTokenV2Result 描述 proof、花费输入和已提交的 base-token unshield
@@ -140,6 +143,8 @@ type UnshieldBaseTokenV2Result struct {
 	RelayAdaptContract     string                          `json:"relayAdaptContract"`
 	WrappedBaseToken       string                          `json:"wrappedBaseToken"`
 	Amount                 *big.Int                        `json:"amountWei"`
+	BroadcasterFee         *big.Int                        `json:"broadcasterFeeWei,omitempty"`
+	BroadcasterAddress     string                          `json:"broadcasterAddress,omitempty"`
 	RelayAdaptParamsRandom string                          `json:"relayAdaptParamsRandom"`
 	RelayAdaptParams       string                          `json:"relayAdaptParams"`
 	Circuit                string                          `json:"circuit"`
@@ -167,6 +172,8 @@ type UnshieldERC20V2Request struct {
 	MaxNonceRetries  int
 	Progress         func(TransactionProgress)
 	ProofProgress    railproof.ProgressCallback
+	// SelfBroadcast forces EIP-1559 self-send instead of the default Waku broadcaster path.
+	SelfBroadcast *bool
 }
 
 // TransactionProgress 报告私有执行的粗粒度进度。
@@ -181,6 +188,8 @@ type UnshieldERC20V2Result struct {
 	RailgunSmartWallet    string                          `json:"railgunSmartWallet"`
 	TokenAddress          string                          `json:"tokenAddress"`
 	Amount                *big.Int                        `json:"amountWei"`
+	BroadcasterFee        *big.Int                        `json:"broadcasterFeeWei,omitempty"`
+	BroadcasterAddress    string                          `json:"broadcasterAddress,omitempty"`
 	Circuit               string                          `json:"circuit"`
 	MerkleRoot            string                          `json:"merkleRoot"`
 	SpendUTXOs            []UnshieldUTXO                  `json:"spendUtxos"`
@@ -414,13 +423,65 @@ func (runtime *Runtime) ShieldERC20(ctx context.Context, request ShieldERC20Requ
 }
 
 // UnshieldBaseTokenV2 生成 proof 并提交 V2 base-token unshield 交易。
+//
+// 默认经 Waku 随机挑选 broadcaster 代发并支付 broadcaster fee；
+// SelfBroadcast=true 时退回 EIP-1559 自广播。
 func (runtime *Runtime) UnshieldBaseTokenV2(ctx context.Context, request UnshieldBaseTokenV2Request) (UnshieldBaseTokenV2Result, error) {
-	if err := runtime.validatePrivateExecution(); err != nil {
+	if err := runtime.validatePrivateSpend(); err != nil {
 		return UnshieldBaseTokenV2Result{}, err
 	}
-	prepared, err := prepareUnshieldBNB(ctx, runtime, *runtime.secret, runtime.network, cloneBigIntOrNil(request.Amount), request.RecipientAddress)
+	useWaku := runtime.useBroadcaster(request.SelfBroadcast)
+	if !useWaku {
+		if err := runtime.validateSelfBroadcast(); err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
+	}
+
+	var (
+		selectedFee *big.Int
+		selectedAddr string
+		selected     broadcaster.SelectedBroadcaster
+		client       *broadcaster.Client
+		minGasPrice  = big.NewInt(0)
+	)
+	if useWaku {
+		var err error
+		client, err = runtime.ensureBroadcasterClient(ctx)
+		if err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
+		reportTransactionProgress(request.Progress, "broadcaster", "selecting random Waku broadcaster")
+		wrapped := strings.TrimSpace(runtime.network.ContractAddresses["wrappedBaseToken"])
+		selected, err = runtime.selectRandomBroadcaster(ctx, client, wrapped, true)
+		if err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
+		selectedFee, err = calculateBroadcasterFeeAmount(selected.TokenFee.FeePerUnitGas, runtime.broadcasterGasEstimate())
+		if err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
+		selectedAddr = selected.RailgunAddress
+	}
+
+	prepared, err := prepareUnshieldBNB(ctx, runtime, *runtime.secret, runtime.network, cloneBigIntOrNil(request.Amount), request.RecipientAddress, selectedFee, !useWaku)
 	if err != nil {
 		return UnshieldBaseTokenV2Result{}, err
+	}
+	if useWaku {
+		tokenData, err := railcrypto.TokenDataERC20(prepared.WrappedBaseToken)
+		if err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
+		feeOut, err := broadcasterFeeOutput(selected.RailgunAddress, tokenData, selectedFee, "railgun-go")
+		if err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
+		if err := applyBroadcasterFeeToInputs(&prepared.Inputs, feeOut, minGasPrice); err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
+		if err := refreshUnshieldBNBAdaptID(&prepared, false); err != nil {
+			return UnshieldBaseTokenV2Result{}, err
+		}
 	}
 	unproved, err := unprovedTransactions(*runtime.secret, prepared.Inputs)
 	if err != nil {
@@ -435,12 +496,30 @@ func (runtime *Runtime) UnshieldBaseTokenV2(ctx context.Context, request Unshiel
 	if err != nil {
 		return UnshieldBaseTokenV2Result{}, err
 	}
-	populated, err := railtransaction.RelayAdaptPopulateUnshieldBaseTokenV2(proved, prepared.RelayAdaptAddress, prepared.RecipientAddress, prepared.RelayAdaptParamsRandom, true)
+	populated, err := railtransaction.RelayAdaptPopulateUnshieldBaseTokenV2(proved, prepared.RelayAdaptAddress, prepared.RecipientAddress, prepared.RelayAdaptParamsRandom, !useWaku)
 	if err != nil {
 		return UnshieldBaseTokenV2Result{}, err
 	}
-	reportTransactionProgress(request.Progress, "broadcasting", "sending BNB unshield transaction")
-	submitted, err := runtime.sendRelayAdaptRequest(ctx, populated, request.MaxNonceRetries, request.PollInterval)
+
+	var submitted SubmittedTransactionWithReceipt
+	if useWaku {
+		submitted, err = runtime.submitViaBroadcaster(
+			ctx,
+			client,
+			selected,
+			"V2_PoseidonMerkle",
+			populated.To,
+			populated.Data,
+			nullifiersFromProved(proved),
+			minGasPrice,
+			true,
+			request.Progress,
+			request.PollInterval,
+		)
+	} else {
+		reportTransactionProgress(request.Progress, "broadcasting", "sending BNB unshield transaction")
+		submitted, err = runtime.sendRelayAdaptRequest(ctx, populated, request.MaxNonceRetries, request.PollInterval)
+	}
 	if err != nil {
 		return UnshieldBaseTokenV2Result{}, err
 	}
@@ -449,6 +528,8 @@ func (runtime *Runtime) UnshieldBaseTokenV2(ctx context.Context, request Unshiel
 		RelayAdaptContract:     prepared.RelayAdaptAddress,
 		WrappedBaseToken:       prepared.WrappedBaseToken,
 		Amount:                 cloneBigInt(prepared.Amount),
+		BroadcasterFee:         cloneBigIntOrNil(selectedFee),
+		BroadcasterAddress:     selectedAddr,
 		RelayAdaptParamsRandom: prepared.RelayAdaptParamsRandom,
 		RelayAdaptParams:       prepared.RelayAdaptParams,
 		Circuit:                prepared.Circuit,
@@ -463,13 +544,61 @@ func (runtime *Runtime) UnshieldBaseTokenV2(ctx context.Context, request Unshiel
 }
 
 // UnshieldERC20V2 生成 proof 并提交 V2 ERC20 unshield 交易。
+//
+// 默认经 Waku 随机挑选 broadcaster 代发并支付 broadcaster fee；
+// SelfBroadcast=true 时退回 EIP-1559 自广播。
 func (runtime *Runtime) UnshieldERC20V2(ctx context.Context, request UnshieldERC20V2Request) (UnshieldERC20V2Result, error) {
-	if err := runtime.validatePrivateExecution(); err != nil {
+	if err := runtime.validatePrivateSpend(); err != nil {
 		return UnshieldERC20V2Result{}, err
 	}
-	prepared, err := prepareUnshieldERC20(ctx, runtime, *runtime.secret, runtime.network, request.TokenData, cloneBigIntOrNil(request.Amount), request.RecipientAddress)
+	useWaku := runtime.useBroadcaster(request.SelfBroadcast)
+	if !useWaku {
+		if err := runtime.validateSelfBroadcast(); err != nil {
+			return UnshieldERC20V2Result{}, err
+		}
+	}
+
+	var (
+		selectedFee  *big.Int
+		selectedAddr string
+		selected     broadcaster.SelectedBroadcaster
+		client       *broadcaster.Client
+		minGasPrice  = big.NewInt(0)
+	)
+	if useWaku {
+		var err error
+		client, err = runtime.ensureBroadcasterClient(ctx)
+		if err != nil {
+			return UnshieldERC20V2Result{}, err
+		}
+		reportTransactionProgress(request.Progress, "broadcaster", "selecting random Waku broadcaster")
+		tokenAddress := strings.TrimSpace(request.TokenData.TokenAddress)
+		selected, err = runtime.selectRandomBroadcaster(ctx, client, tokenAddress, false)
+		if err != nil {
+			return UnshieldERC20V2Result{}, err
+		}
+		selectedFee, err = calculateBroadcasterFeeAmount(selected.TokenFee.FeePerUnitGas, runtime.broadcasterGasEstimate())
+		if err != nil {
+			return UnshieldERC20V2Result{}, err
+		}
+		selectedAddr = selected.RailgunAddress
+	}
+
+	prepared, err := prepareUnshieldERC20(ctx, runtime, *runtime.secret, runtime.network, request.TokenData, cloneBigIntOrNil(request.Amount), request.RecipientAddress, selectedFee)
 	if err != nil {
 		return UnshieldERC20V2Result{}, err
+	}
+	if useWaku {
+		feeOut, err := broadcasterFeeOutput(selected.RailgunAddress, request.TokenData, selectedFee, "railgun-go")
+		if err != nil {
+			return UnshieldERC20V2Result{}, err
+		}
+		if err := applyBroadcasterFeeToInputs(&prepared.Inputs, feeOut, minGasPrice); err != nil {
+			return UnshieldERC20V2Result{}, err
+		}
+		if err := refreshPreparedCircuit(&prepared.Inputs, &prepared.Circuit); err != nil {
+			return UnshieldERC20V2Result{}, err
+		}
 	}
 	unproved, err := unprovedTransactions(*runtime.secret, prepared.Inputs)
 	if err != nil {
@@ -492,8 +621,26 @@ func (runtime *Runtime) UnshieldERC20V2(ctx context.Context, request UnshieldERC
 	if err != nil {
 		return UnshieldERC20V2Result{}, err
 	}
-	reportTransactionProgress(request.Progress, "broadcasting", "sending ERC20 unshield transaction")
-	submitted, err := runtime.sendRelayAdaptRequest(ctx, populated, request.MaxNonceRetries, request.PollInterval)
+
+	var submitted SubmittedTransactionWithReceipt
+	if useWaku {
+		submitted, err = runtime.submitViaBroadcaster(
+			ctx,
+			client,
+			selected,
+			"V2_PoseidonMerkle",
+			populated.To,
+			populated.Data,
+			nullifiersFromProved(proved),
+			minGasPrice,
+			false,
+			request.Progress,
+			request.PollInterval,
+		)
+	} else {
+		reportTransactionProgress(request.Progress, "broadcasting", "sending ERC20 unshield transaction")
+		submitted, err = runtime.sendRelayAdaptRequest(ctx, populated, request.MaxNonceRetries, request.PollInterval)
+	}
 	if err != nil {
 		return UnshieldERC20V2Result{}, err
 	}
@@ -502,6 +649,8 @@ func (runtime *Runtime) UnshieldERC20V2(ctx context.Context, request UnshieldERC
 		RailgunSmartWallet:    prepared.RailgunSmartWallet,
 		TokenAddress:          prepared.TokenAddress,
 		Amount:                cloneBigInt(prepared.Amount),
+		BroadcasterFee:        cloneBigIntOrNil(selectedFee),
+		BroadcasterAddress:    selectedAddr,
 		Circuit:               prepared.Circuit,
 		MerkleRoot:            prepared.MerkleRoot,
 		SpendUTXOs:            unshieldUTXOOutputs(prepared.SpendUTXOs),
@@ -538,6 +687,23 @@ func (runtime *Runtime) sendRelayAdaptRequest(ctx context.Context, request railt
 }
 
 func (runtime *Runtime) validatePrivateExecution() error {
+	if err := runtime.validatePrivateSpend(); err != nil {
+		return err
+	}
+	return runtime.validateSelfBroadcast()
+}
+
+func (runtime *Runtime) validatePrivateSpend() error {
+	if runtime == nil {
+		return fmt.Errorf("runtime is required")
+	}
+	if runtime.secret == nil {
+		return fmt.Errorf("wallet secret is required")
+	}
+	return nil
+}
+
+func (runtime *Runtime) validateSelfBroadcast() error {
 	if runtime == nil {
 		return fmt.Errorf("runtime is required")
 	}
@@ -561,19 +727,22 @@ func (runtime *Runtime) contractCaller() (contractCallProvider, error) {
 	return caller, nil
 }
 
-func prepareUnshieldBNB(ctx context.Context, runtime *Runtime, secret railwallet.WalletSecret, config NetworkConfig, amount *big.Int, recipient string) (preparedUnshieldBNB, error) {
+func prepareUnshieldBNB(ctx context.Context, runtime *Runtime, secret railwallet.WalletSecret, config NetworkConfig, amount *big.Int, recipient string, feeAmount *big.Int, sendWithPublicWallet bool) (preparedUnshieldBNB, error) {
 	if runtime == nil || runtime.engine == nil || runtime.engine.wallet == nil {
 		return preparedUnshieldBNB{}, fmt.Errorf("runtime wallet is required")
 	}
-	fromAddress, err := railtransaction.AddressFromPrivateKey(secret.EthereumPrivateKey)
-	if err != nil {
-		return preparedUnshieldBNB{}, err
-	}
 	recipient = strings.TrimSpace(recipient)
 	if recipient == "" {
+		if strings.TrimSpace(secret.EthereumPrivateKey) == "" {
+			return preparedUnshieldBNB{}, fmt.Errorf("recipient address is required")
+		}
+		fromAddress, err := railtransaction.AddressFromPrivateKey(secret.EthereumPrivateKey)
+		if err != nil {
+			return preparedUnshieldBNB{}, err
+		}
 		recipient = fromAddress
 	}
-	recipient, err = railcrypto.FormatHexToByteLength(recipient, 20, true)
+	recipient, err := railcrypto.FormatHexToByteLength(recipient, 20, true)
 	if err != nil {
 		return preparedUnshieldBNB{}, fmt.Errorf("recipient address: %w", err)
 	}
@@ -597,13 +766,18 @@ func prepareUnshieldBNB(ctx context.Context, runtime *Runtime, secret railwallet
 	if err != nil {
 		return preparedUnshieldBNB{}, err
 	}
+	balance := transactionTreeBalanceTotal(treeBalances)
+	if feeAmount == nil {
+		feeAmount = big.NewInt(0)
+	}
 	if amount == nil {
-		amount = transactionTreeBalanceTotal(treeBalances)
+		amount = new(big.Int).Sub(balance, feeAmount)
 	}
 	if amount == nil || amount.Sign() <= 0 {
-		return preparedUnshieldBNB{}, fmt.Errorf("no positive spendable WBNB balance")
+		return preparedUnshieldBNB{}, fmt.Errorf("no positive spendable WBNB balance after broadcaster fee")
 	}
-	solution, spendTXOs, err := selectSpendableUTXOs(treeBalances, txoByID, amount)
+	need := new(big.Int).Add(amount, feeAmount)
+	solution, spendTXOs, err := selectSpendableUTXOs(treeBalances, txoByID, need)
 	if err != nil {
 		return preparedUnshieldBNB{}, err
 	}
@@ -619,7 +793,7 @@ func prepareUnshieldBNB(ctx context.Context, runtime *Runtime, secret railwallet
 	if err != nil {
 		return preparedUnshieldBNB{}, err
 	}
-	relayParams, err := railtransaction.RelayAdaptParamsUnshieldBaseTokenV2(dummyTransactions, relayAdaptAddress, recipient, relayRandom, true)
+	relayParams, err := railtransaction.RelayAdaptParamsUnshieldBaseTokenV2(dummyTransactions, relayAdaptAddress, recipient, relayRandom, sendWithPublicWallet)
 	if err != nil {
 		return preparedUnshieldBNB{}, err
 	}
@@ -646,19 +820,22 @@ func prepareUnshieldBNB(ctx context.Context, runtime *Runtime, secret railwallet
 	}, nil
 }
 
-func prepareUnshieldERC20(ctx context.Context, runtime *Runtime, secret railwallet.WalletSecret, config NetworkConfig, tokenData railcrypto.TokenData, amount *big.Int, recipient string) (preparedUnshieldERC20, error) {
+func prepareUnshieldERC20(ctx context.Context, runtime *Runtime, secret railwallet.WalletSecret, config NetworkConfig, tokenData railcrypto.TokenData, amount *big.Int, recipient string, feeAmount *big.Int) (preparedUnshieldERC20, error) {
 	if runtime == nil || runtime.engine == nil || runtime.engine.wallet == nil {
 		return preparedUnshieldERC20{}, fmt.Errorf("runtime wallet is required")
 	}
-	fromAddress, err := railtransaction.AddressFromPrivateKey(secret.EthereumPrivateKey)
-	if err != nil {
-		return preparedUnshieldERC20{}, err
-	}
 	recipient = strings.TrimSpace(recipient)
 	if recipient == "" {
+		if strings.TrimSpace(secret.EthereumPrivateKey) == "" {
+			return preparedUnshieldERC20{}, fmt.Errorf("recipient address is required")
+		}
+		fromAddress, err := railtransaction.AddressFromPrivateKey(secret.EthereumPrivateKey)
+		if err != nil {
+			return preparedUnshieldERC20{}, err
+		}
 		recipient = fromAddress
 	}
-	recipient, err = railcrypto.FormatHexToByteLength(recipient, 20, true)
+	recipient, err := railcrypto.FormatHexToByteLength(recipient, 20, true)
 	if err != nil {
 		return preparedUnshieldERC20{}, fmt.Errorf("recipient address: %w", err)
 	}
@@ -678,13 +855,18 @@ func prepareUnshieldERC20(ctx context.Context, runtime *Runtime, secret railwall
 	if err != nil {
 		return preparedUnshieldERC20{}, err
 	}
+	if feeAmount == nil {
+		feeAmount = big.NewInt(0)
+	}
+	balance := transactionTreeBalanceTotal(treeBalances)
 	if amount == nil {
-		amount = transactionTreeBalanceTotal(treeBalances)
+		amount = new(big.Int).Sub(balance, feeAmount)
 	}
 	if amount == nil || amount.Sign() <= 0 {
-		return preparedUnshieldERC20{}, fmt.Errorf("no positive spendable ERC20 balance for %s", tokenAddress)
+		return preparedUnshieldERC20{}, fmt.Errorf("no positive spendable ERC20 balance for %s after broadcaster fee", tokenAddress)
 	}
-	solution, spendTXOs, err := selectSpendableUTXOs(treeBalances, txoByID, amount)
+	need := new(big.Int).Add(amount, feeAmount)
+	solution, spendTXOs, err := selectSpendableUTXOs(treeBalances, txoByID, need)
 	if err != nil {
 		return preparedUnshieldERC20{}, err
 	}
@@ -710,6 +892,48 @@ func prepareUnshieldERC20(ctx context.Context, runtime *Runtime, secret railwall
 		SpendUTXOs:         spendTXOs,
 		Inputs:             inputs,
 	}, nil
+}
+
+func refreshUnshieldBNBAdaptID(prepared *preparedUnshieldBNB, sendWithPublicWallet bool) error {
+	if prepared == nil {
+		return fmt.Errorf("prepared unshield is required")
+	}
+	dummyTransactions, err := railtransaction.GenerateDummyTransactionsV2(prepared.Inputs)
+	if err != nil {
+		return err
+	}
+	if len(dummyTransactions) == 0 {
+		return fmt.Errorf("no transactions generated")
+	}
+	relayParams, err := railtransaction.RelayAdaptParamsUnshieldBaseTokenV2(
+		dummyTransactions,
+		prepared.RelayAdaptAddress,
+		prepared.RecipientAddress,
+		prepared.RelayAdaptParamsRandom,
+		sendWithPublicWallet,
+	)
+	if err != nil {
+		return err
+	}
+	prepared.Inputs.AdaptID = railtransaction.AdaptID{Contract: prepared.RelayAdaptAddress, Params: relayParams}
+	prepared.RelayAdaptParams = relayParams
+	prepared.Circuit = railproof.RailgunArtifactKey(len(dummyTransactions[0].Nullifiers), len(dummyTransactions[0].Commitments))
+	return nil
+}
+
+func refreshPreparedCircuit(inputs *railtransaction.DummyTransactionBatchInputs, circuit *string) error {
+	if inputs == nil || circuit == nil {
+		return fmt.Errorf("transaction inputs are required")
+	}
+	dummyTransactions, err := railtransaction.GenerateDummyTransactionsV2(*inputs)
+	if err != nil {
+		return err
+	}
+	if len(dummyTransactions) == 0 {
+		return fmt.Errorf("no transactions generated")
+	}
+	*circuit = railproof.RailgunArtifactKey(len(dummyTransactions[0].Nullifiers), len(dummyTransactions[0].Commitments))
+	return nil
 }
 
 func selectSpendableUTXOs(treeBalances []railtransaction.TreeBalance, txoByID map[string]railwallet.StoredTXO, amount *big.Int) (railtransaction.SimpleUTXOGroup, []railwallet.StoredTXO, error) {

@@ -12,6 +12,7 @@
 | `pkg/events` | V2/V3 log parsing, JSON-RPC adapters, checkpoint stores, and block-range scanners. |
 | `pkg/wallet` | Wallet state, TXO import, balances, transaction history, POI status, local rescans, keystores, and rollback. |
 | `pkg/quicksync` | Historical event bootstrap sources. |
+| `pkg/broadcaster` | Public broadcaster client: Waku transport, fee cache, selection, encrypted transact submit. Wired as the default unshield submit path in `pkg/sdk` (opt out with `SelfBroadcast`). |
 | `pkg/sdk` | Stable runtime facade that assembles stores, providers, network config, sync strategy, proof config, and private execution. |
 
 ## Dependency Direction
@@ -26,6 +27,7 @@ app
       -> pkg/wallet
       -> pkg/events
       -> pkg/quicksync
+      -> pkg/broadcaster
       -> pkg/transaction
       -> pkg/proof
       -> pkg/crypto
